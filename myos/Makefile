@@ -1,24 +1,32 @@
+# Build 32-bit kernel
+
 CC = gcc
 LD = ld
-CFLAGS = -m32 -ffreestanding -fno-pic -fno-pie -O2 -Wall -Wextra
-LDFLAGS = -m elf_i386 -T kernel/linker.ld -nostdlib
+CFLAGS = -m32 -ffreestanding -nostdlib -fno-pie -fno-stack-protector -Wall -Wextra
 
-all: iso/myos.iso
+OBJS = boot/multiboot_header.o boot/boot.o kernel/kernel.o kernel/print.o
 
-kernel/kernel.elf: kernel/multiboot_header.o kernel/kernel.o kernel/linker.ld
-	$(LD) $(LDFLAGS) -o $@ kernel/multiboot_header.o kernel/kernel.o
+all: os-image.bin
 
-iso/myos.iso: kernel/kernel.elf boot/grub/grub.cfg
-	mkdir -p iso/boot/grub
-	cp kernel/kernel.elf iso/boot/
-	cp boot/grub/grub.cfg iso/boot/grub/
-	grub-mkrescue -o iso/myos.iso iso/
+boot/multiboot_header.o: boot/multiboot_header.s
+	nasm -f elf32 boot/multiboot_header.s -o boot/multiboot_header.o
 
-run: iso/myos.iso
-	qemu-system-i386 -cdrom iso/myos.iso
+
+boot/boot.o: boot/boot.s
+	nasm -f elf32  boot/boot.s -o boot/boot.o
+
+kernel/kernel.o: kernel/kernel.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+kernel/print.o: kernel/print.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+os-image.bin: linker.ld boot/multiboot_header.o boot/boot.o kernel/kernel.o kernel/print.o
+	 ld -m elf_i386 -T linker.ld -o os-image.bin boot/multiboot_header.o boot/boot.o kernel/kernel.o kernel/print.o
+
+
+run: os-image.bin
+	qemu-system-i386 -kernel os-image.bin
 
 clean:
-	rm -rf kernel/*.o kernel/*.elf iso
-
-kernel/multiboot_header.o: kernel/multiboot_header.s
-	$(CC) -m32 -c $< -o $@
+	rm -f $(OBJS) os-image.bin

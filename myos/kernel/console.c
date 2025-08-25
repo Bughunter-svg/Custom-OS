@@ -1,22 +1,38 @@
-#include <stdarg.h>
-#include <stdbool.h>
+#include "console.h"
 
-static volatile char* vga = (char*)0xb8000;
-static int row = 0, col = 0;
+#define VGA_ADDRESS 0xB8000
+#define VGA_WIDTH 80
+#define VGA_HEIGHT 25
 
-static void putc(char c) {
-    if (c == '\n') {
-        col = 0;
-        row++;
-        return;
+unsigned short* vga_buffer = (unsigned short*)VGA_ADDRESS;
+int cursor_x = 0;
+int cursor_y = 0;
+
+void console_clear() {
+    for (int y = 0; y < VGA_HEIGHT; y++) {
+        for (int x = 0; x < VGA_WIDTH; x++) {
+            vga_buffer[y * VGA_WIDTH + x] = (0x07 << 8) | ' ';
+        }
     }
-    int idx = (row * 80 + col) * 2;
-    vga[idx] = c;
-    vga[idx + 1] = 0x07; // White on black
-    col++;
-    if (col >= 80) { col = 0; row++; }
+    cursor_x = 0;
+    cursor_y = 0;
 }
 
-void kprint(const char* s) {
-    while (*s) putc(*s++);
+void console_putc(char c) {
+    if (c == '\n') {
+        cursor_x = 0;
+        cursor_y++;
+    } else {
+        vga_buffer[cursor_y * VGA_WIDTH + cursor_x] = (0x07 << 8) | c;
+        cursor_x++;
+        if (cursor_x >= VGA_WIDTH) {
+            cursor_x = 0;
+            cursor_y++;
+        }
+    }
+
+    if (cursor_y >= VGA_HEIGHT) {
+        cursor_y = 0;  // simple wrap (no scroll yet)
+    }
 }
+
