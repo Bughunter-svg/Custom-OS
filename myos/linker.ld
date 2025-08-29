@@ -1,33 +1,27 @@
-ENTRY(start)
+ENTRY(_start)
 
 SECTIONS
 {
-    . = 1M;                /* Load kernel at 1MB */
-
-    .multiboot_header :
-    {
-        *(.multiboot_header)
-    }
+    . = 0x100000;
 
     .text :
     {
-        *(.text*)
+        *(.text)
     }
 
     .rodata :
     {
-        *(.rodata*)
+        *(.rodata)
     }
 
     .data :
     {
-        *(.data*)
+        *(.data)
     }
 
     .bss :
     {
-        *(.bss*)
+        *(.bss)
         *(COMMON)
     }
 }
-

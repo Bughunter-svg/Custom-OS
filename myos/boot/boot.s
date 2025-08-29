@@ -1,9 +1,16 @@
-extern kernel_main        ; declare kernel_main exists in C code
-global start
+section .multiboot
+    align 4
+    dd 0x1BADB002        ; magic number
+    dd 0x0               ; flags
+    dd -(0x1BADB002)     ; checksum
 
 section .text
-start:
-    call kernel_main
-    cli
+global _start
+_start:
+    extern kmain
+    call kmain
+
+.loop:
     hlt
+    jmp .loop
 
